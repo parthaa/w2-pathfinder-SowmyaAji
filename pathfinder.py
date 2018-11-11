@@ -32,17 +32,22 @@ class PathFinder:
         value = int((self.data[row][column] - lowest) * 255.0 / difference)
         self.__draw_pixel(value, column, row)
 
-    elevations = [self.trace_path(row, 0) for row in range(len(self.data))]
+    elevations = [self.__trace_path(row, 0) for row in range(len(self.data))]
     row = elevations.index(min(elevations))
     self.__trace_path(row, 0, ImageColor.getcolor('red', 'RGB'))
+    self.__trace_path(row + 1, int(len(self.data[0])/2), ImageColor.getcolor('yellow', 'RGB'), backwards = True)
     self.image.save(self.out)
 
   def __trace_path(self, row, column, color = ImageColor.getcolor('cyan', 'RGB'), total_elevation = 0, backwards = False):
     current_value = self.data[row][column]
     self.__draw_pixel(255, column, row, color)
     next_row = row
-    next_column = column + 1
-    if next_column < len(self.data[0]):
+    if backwards:
+      next_column = column - 1
+    else:
+      next_column = column + 1
+
+    if next_column < len(self.data[0]) and next_column >= 0:
       values = [sys.maxsize] * 3
       if row > 0:
         values[0] = abs(current_value - self.data[row -1][next_column])
@@ -52,7 +57,7 @@ class PathFinder:
         values[2] = abs(current_value - self.data[row + 1][next_column])
       next_row = row - 1 + values.index(min(values))
       total_elevation += min(values)
-      return self.trace_path(next_row, next_column, color, total_elevation)
+      return self.__trace_path(next_row, next_column, color, total_elevation, backwards)
     return total_elevation
 
   def __draw_pixel(self, opacity, x, y, color = ImageColor.getcolor('white', 'RGB')):
