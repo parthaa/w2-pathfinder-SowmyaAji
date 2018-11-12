@@ -9,20 +9,6 @@ class PathFinder:
     self.__parse()
     self.image = Image.new('RGBA',(len(self.data[0]),len(self.data)))
 
-  def __parse(self):
-    self.data = [[int(item) for item in line.strip().split()] for line in open(self.file).readlines()]
-
-  def __min_max_elevation(self):
-    largest = self.data[0][0]
-    smallest = self.data[0][0]
-    for row in self.data:
-      for column in row:
-        if largest < column:
-          largest = column
-        if smallest > column:
-          smallest = column
-    return (smallest, largest)
-
   def draw(self):
     lowest, highest = self.__min_max_elevation() # 4000
     difference = highest - lowest # 1000
@@ -32,7 +18,7 @@ class PathFinder:
         value = int((self.data[row][column] - lowest) * 255.0 / difference)
         self.__draw_pixel(value, column, row)
 
-    elevations = [self.__trace_path(row, 0) for row in range(len(self.data))]
+    elevations = [self.__trace_path_iterative(row) for row in range(len(self.data))]
     row = elevations.index(min(elevations))
     self.__trace_path(row, 0, ImageColor.getcolor('red', 'RGB'))
     self.__trace_path(row + 1, int(len(self.data[0])/2), ImageColor.getcolor('yellow', 'RGB'), backwards = True)
@@ -60,8 +46,41 @@ class PathFinder:
       return self.__trace_path(next_row, next_column, color, total_elevation, backwards)
     return total_elevation
 
+  def __trace_path_iterative(self, row, color = ImageColor.getcolor('cyan', 'RGB')):
+    total_elevation = 0
+    current_row = row
+    for column_index in range(len(self.data[row])):
+      self.__draw_pixel(255, column_index, current_row, color)
+      if column_index + 1 < len(self.data[row]):
+        current_value = self.data[current_row][column_index]
+        values = [sys.maxsize] * 3
+        if current_row > 0:
+          values[0] = abs(current_value - self.data[current_row -1][column_index + 1])
+
+        values[1] = abs(current_value - self.data[current_row][column_index + 1])
+
+        if current_row + 1 < len(self.data[0]):
+          values[2] = abs(current_value - self.data[current_row + 1][column_index + 1])
+        current_row = current_row - 1 + values.index(min(values))
+        total_elevation += min(values)
+    return total_elevation
+
   def __draw_pixel(self, opacity, x, y, color = ImageColor.getcolor('white', 'RGB')):
     self.image.putpixel((x, y), color + (opacity,))
+
+  def __parse(self):
+    self.data = [[int(item) for item in line.strip().split()] for line in open(self.file).readlines()]
+
+  def __min_max_elevation(self):
+    largest = self.data[0][0]
+    smallest = self.data[0][0]
+    for row in self.data:
+      for column in row:
+        if largest < column:
+          largest = column
+        if smallest > column:
+          smallest = column
+    return (smallest, largest)
 
 def main(file = "elevation_small.txt", out = "out.png"):
   PathFinder(file, out).draw()
